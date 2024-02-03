@@ -38,6 +38,7 @@
 #include <ext/spl/spl_exceptions.h>
 
 #define PATHBUFSIZE (MAXPATHLEN + 3)
+#define ZEND_HAS_DEFAULT_OBJECT_HANDLERS (ZEND_EXTENSION_API_NO >= 420230831)
 
 /* {{{ globals */
 
@@ -239,6 +240,9 @@ static PHP_MINIT_FUNCTION(mecab)
 	{
 		ce_MeCab_Tagger = register_class_MeCab_Tagger();
 		ce_MeCab_Tagger->create_object = php_mecab_object_new;
+#if ZEND_HAS_DEFAULT_OBJECT_HANDLERS
+		ce_MeCab_Tagger->default_object_handlers = &php_mecab_object_handlers;
+#endif
 
 		memcpy(&php_mecab_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 		php_mecab_object_handlers.clone_obj = NULL;
@@ -251,6 +255,9 @@ static PHP_MINIT_FUNCTION(mecab)
 
 		ce_MeCab_Node = register_class_MeCab_Node(zend_ce_aggregate);
 		ce_MeCab_Node->create_object = php_mecab_node_object_new;
+#if ZEND_HAS_DEFAULT_OBJECT_HANDLERS
+		ce_MeCab_Node->default_object_handlers = &php_mecab_node_object_handlers;
+#endif
 
 		memcpy(&php_mecab_node_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 		php_mecab_node_object_handlers.clone_obj = NULL;
@@ -269,6 +276,9 @@ static PHP_MINIT_FUNCTION(mecab)
 	{
 		ce_MeCab_Path = register_class_MeCab_Path();
 		ce_MeCab_Path->create_object = php_mecab_path_object_new;
+#if ZEND_HAS_DEFAULT_OBJECT_HANDLERS
+		ce_MeCab_Path->default_object_handlers = &php_mecab_path_object_handlers;
+#endif
 
 		memcpy(&php_mecab_path_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 		php_mecab_path_object_handlers.clone_obj = NULL;
@@ -385,7 +395,9 @@ php_mecab_object_new(zend_class_entry *ce)
 	zend_object_std_init(&intern->std, ce);
 	object_properties_init(&intern->std, ce);
 
+#if !ZEND_HAS_DEFAULT_OBJECT_HANDLERS
 	intern->std.handlers = &php_mecab_object_handlers;
+#endif
 
 	return &intern->std;
 }
@@ -472,7 +484,9 @@ php_mecab_node_object_new(zend_class_entry *ce)
 
 	zend_object_std_init(&intern->std, ce);
 	object_properties_init(&intern->std, ce);
+#if !ZEND_HAS_DEFAULT_OBJECT_HANDLERS
 	intern->std.handlers = &php_mecab_node_object_handlers;
+#endif
 
 	return &intern->std;
 }
@@ -556,7 +570,9 @@ php_mecab_path_object_new(zend_class_entry *ce)
 
 	zend_object_std_init(&intern->std, ce);
 	object_properties_init(&intern->std, ce);
+#if !ZEND_HAS_DEFAULT_OBJECT_HANDLERS
 	intern->std.handlers = &php_mecab_path_object_handlers;
+#endif
 
 	return &intern->std;
 }
