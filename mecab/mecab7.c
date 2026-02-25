@@ -2577,7 +2577,7 @@ PHP_METHOD(MeCab_Node, __get)
 	if (!zend_binary_strcmp(name, len, ZEND_STRL("posid")))     RETURN_LONG((zend_long)node->posid);
 	if (!zend_binary_strcmp(name, len, ZEND_STRL("char_type"))) RETURN_LONG((zend_long)node->char_type);
 	if (!zend_binary_strcmp(name, len, ZEND_STRL("stat")))      RETURN_LONG((zend_long)node->stat);
-	if (!zend_binary_strcmp(name, len, ZEND_STRL("isbest")))    RETURN_BOOL((bool)node->isbest);
+	if (!zend_binary_strcmp(name, len, ZEND_STRL("isbest")))    RETURN_BOOL((zend_bool)node->isbest);
 	if (!zend_binary_strcmp(name, len, ZEND_STRL("alpha")))     RETURN_DOUBLE((double)node->alpha);
 	if (!zend_binary_strcmp(name, len, ZEND_STRL("beta")))      RETURN_DOUBLE((double)node->beta);
 	if (!zend_binary_strcmp(name, len, ZEND_STRL("prob")))      RETURN_DOUBLE((double)node->prob);
