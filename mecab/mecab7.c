@@ -596,19 +596,13 @@ php_mecab_path_free_object_storage(zend_object *object)
  * get sibling node from mecab_node
  */
 static zval *
-php_mecab_node_get_sibling(zval *zv, zval *object, php_mecab_node *xnode, php_mecab_node_rel rel)
+php_mecab_node_get_sibling(zval *dest, zval *object, php_mecab_node *xnode, php_mecab_node_rel rel)
 {
 	const mecab_node_t *node = xnode->ptr;
 	php_mecab_node *xsbl = NULL;
 	const mecab_node_t *sbl = NULL;
-	zval *retval = NULL;
 
-	if (zv == NULL) {
-		retval = (zval *)emalloc(sizeof(zval));
-	} else {
-		zval_dtor(zv);
-		retval = zv;
-	}
+	assert(dest != NULL);
 
 	/* scan */
 	if (rel == NODE_PREV) {
@@ -620,26 +614,26 @@ php_mecab_node_get_sibling(zval *zv, zval *object, php_mecab_node *xnode, php_me
 	} else if (rel == NODE_BNEXT) {
 		sbl = node->bnext;
 	} else {
-		ZVAL_FALSE(retval);
-		return retval;
+		ZVAL_FALSE(dest);
+		return dest;
 	}
 
 	if (sbl == NULL) {
-		ZVAL_NULL(retval);
-		return retval;
+		ZVAL_NULL(dest);
+		return dest;
 	}
 
 	/* set return value */
 	{
 		php_mecab_node_object *newobj;
-		object_init_ex(retval, ce_MeCab_Node);
-		newobj = PHP_MECAB_NODE_OBJECT_P(retval);
+		object_init_ex(dest, ce_MeCab_Node);
+		newobj = PHP_MECAB_NODE_OBJECT_P(dest);
 		xsbl = newobj->ptr;
 		xsbl->ptr = sbl;
 	}
 	php_mecab_node_set_tagger(xsbl, xnode->tagger);
 
-	return retval;
+	return dest;
 }
 /* }}} */
 
@@ -647,19 +641,13 @@ php_mecab_node_get_sibling(zval *zv, zval *object, php_mecab_node *xnode, php_me
  * get related path from mecab_node
  */
 static zval *
-php_mecab_node_get_path(zval *zv, zval *object, php_mecab_node *xnode, php_mecab_node_rel rel)
+php_mecab_node_get_path(zval *dest, zval *object, php_mecab_node *xnode, php_mecab_node_rel rel)
 {
 	const mecab_node_t *node = xnode->ptr;
 	php_mecab_path *xpath = NULL;
 	const mecab_path_t *path = NULL;
-	zval *retval = NULL;
 
-	if (zv == NULL) {
-		retval = (zval *)emalloc(sizeof(zval));
-	} else {
-		zval_dtor(zv);
-		retval = zv;
-	}
+	assert(dest != NULL);
 
 	/* scan */
 	if (rel == NODE_RPATH) {
@@ -667,26 +655,26 @@ php_mecab_node_get_path(zval *zv, zval *object, php_mecab_node *xnode, php_mecab
 	} else if (rel == NODE_LPATH) {
 		path = node->lpath;
 	} else {
-		ZVAL_FALSE(retval);
-		return retval;
+		ZVAL_FALSE(dest);
+		return dest;
 	}
 
 	if (path == NULL) {
-		ZVAL_NULL(retval);
-		return retval;
+		ZVAL_NULL(dest);
+		return dest;
 	}
 
 	/* set return value */
 	{
 		php_mecab_path_object *newobj;
-		object_init_ex(retval, ce_MeCab_Path);
-		newobj = PHP_MECAB_PATH_OBJECT_P(retval);
+		object_init_ex(dest, ce_MeCab_Path);
+		newobj = PHP_MECAB_PATH_OBJECT_P(dest);
 		xpath = newobj->ptr;
 		xpath->ptr = path;
 	}
 	php_mecab_path_set_tagger(xpath, xnode->tagger);
 
-	return retval;
+	return dest;
 }
 /* }}} */
 
@@ -694,19 +682,13 @@ php_mecab_node_get_path(zval *zv, zval *object, php_mecab_node *xnode, php_mecab
  * get sibling path from mecab_path
  */
 static zval *
-php_mecab_path_get_sibling(zval *zv, zval *object, php_mecab_path *xpath, php_mecab_path_rel rel)
+php_mecab_path_get_sibling(zval *dest, zval *object, php_mecab_path *xpath, php_mecab_path_rel rel)
 {
 	const mecab_path_t *path = xpath->ptr;
 	php_mecab_path *xsbl = NULL;
 	const mecab_path_t *sbl = NULL;
-	zval *retval = NULL;
 
-	if (zv == NULL) {
-		retval = (zval *)emalloc(sizeof(zval));
-	} else {
-		zval_dtor(zv);
-		retval = zv;
-	}
+	assert(dest != NULL);
 
 	/* scan */
 	if (rel == PATH_RNEXT) {
@@ -714,26 +696,26 @@ php_mecab_path_get_sibling(zval *zv, zval *object, php_mecab_path *xpath, php_me
 	} else if (rel == PATH_LNEXT) {
 		sbl = path->lnext;
 	} else {
-		ZVAL_FALSE(retval);
-		return retval;
+		ZVAL_FALSE(dest);
+		return dest;
 	}
 
 	if (sbl == NULL) {
-		ZVAL_NULL(retval);
-		return retval;
+		ZVAL_NULL(dest);
+		return dest;
 	}
 
 	/* set return value */
 	{
 		php_mecab_path_object *newobj;
-		object_init_ex(retval, ce_MeCab_Path);
-		newobj = PHP_MECAB_PATH_OBJECT_P(retval);
+		object_init_ex(dest, ce_MeCab_Path);
+		newobj = PHP_MECAB_PATH_OBJECT_P(dest);
 		xsbl = newobj->ptr;
 		xsbl->ptr = sbl;
 	}
 	php_mecab_path_set_tagger(xsbl, xpath->tagger);
 
-	return retval;
+	return dest;
 }
 /* }}} */
 
@@ -741,19 +723,13 @@ php_mecab_path_get_sibling(zval *zv, zval *object, php_mecab_path *xpath, php_me
  * get related node from mecab_path
  */
 static zval *
-php_mecab_path_get_node(zval *zv, zval *object, php_mecab_path *xpath, php_mecab_path_rel rel)
+php_mecab_path_get_node(zval *dest, zval *object, php_mecab_path *xpath, php_mecab_path_rel rel)
 {
 	const mecab_path_t *path = xpath->ptr;
 	php_mecab_node *xnode = NULL;
 	const mecab_node_t *node = NULL;
-	zval *retval = NULL;
 
-	if (zv == NULL) {
-		retval = (zval *)emalloc(sizeof(zval));
-	} else {
-		zval_dtor(zv);
-		retval = zv;
-	}
+	assert(dest != NULL);
 
 	/* scan */
 	if (rel == PATH_RNODE) {
@@ -761,26 +737,26 @@ php_mecab_path_get_node(zval *zv, zval *object, php_mecab_path *xpath, php_mecab
 	} else if (rel == PATH_LNODE) {
 		node = path->lnode;
 	} else {
-		ZVAL_FALSE(retval);
-		return retval;
+		ZVAL_FALSE(dest);
+		return dest;
 	}
 
 	if (node == NULL) {
-		ZVAL_NULL(retval);
-		return retval;
+		ZVAL_NULL(dest);
+		return dest;
 	}
 
 	/* set return value */
 	{
 		php_mecab_node_object *newobj;
-		object_init_ex(retval, ce_MeCab_Node);
-		newobj = PHP_MECAB_NODE_OBJECT_P(retval);
+		object_init_ex(dest, ce_MeCab_Node);
+		newobj = PHP_MECAB_NODE_OBJECT_P(dest);
 		xnode = newobj->ptr;
 		xnode->ptr = node;
 	}
 	php_mecab_node_set_tagger(xnode, xpath->tagger);
 
-	return retval;
+	return dest;
 }
 /* }}} */
 
