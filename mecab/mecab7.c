@@ -1013,7 +1013,7 @@ php_mecab_check_option(zend_string *zopt)
 PHP_FUNCTION(MeCab_version)
 {
 	if (ZEND_NUM_ARGS() != 0) {
-		WRONG_PARAM_COUNT;
+		ZEND_WRONG_PARAM_COUNT();
 	}
 	RETURN_STRING((char *)mecab_version());
 }
@@ -2778,7 +2778,7 @@ PHP_METHOD(MeCab_NodeIterator, current)
 	php_mecab_node *newnode;
 
 	if (ZEND_NUM_ARGS() != 0) {
-		WRONG_PARAM_COUNT;
+		ZEND_WRONG_PARAM_COUNT();
 	}
 	intern = PHP_MECAB_NODE_OBJECT_P(ZEND_THIS);
 	xnode = intern->ptr;
@@ -2815,7 +2815,7 @@ PHP_METHOD(MeCab_NodeIterator, key)
 	const mecab_node_t *node;
 
 	if (ZEND_NUM_ARGS() != 0) {
-		WRONG_PARAM_COUNT;
+		ZEND_WRONG_PARAM_COUNT();
 	}
 	intern = PHP_MECAB_NODE_OBJECT_P(ZEND_THIS);
 	xnode = intern->ptr;
@@ -2847,7 +2847,7 @@ PHP_METHOD(MeCab_NodeIterator, next)
 	const mecab_node_t *node;
 
 	if (ZEND_NUM_ARGS() != 0) {
-		WRONG_PARAM_COUNT;
+		ZEND_WRONG_PARAM_COUNT();
 	}
 	intern = PHP_MECAB_NODE_OBJECT_P(ZEND_THIS);
 	xnode = intern->ptr;
@@ -2890,7 +2890,7 @@ PHP_METHOD(MeCab_NodeIterator, rewind)
 	php_mecab_node *xnode;
 
 	if (ZEND_NUM_ARGS() != 0) {
-		WRONG_PARAM_COUNT;
+		ZEND_WRONG_PARAM_COUNT();
 	}
 	intern = PHP_MECAB_NODE_OBJECT_P(ZEND_THIS);
 	xnode = intern->ptr;
@@ -2916,7 +2916,7 @@ PHP_METHOD(MeCab_NodeIterator, valid)
 	const mecab_node_t *node;
 
 	if (ZEND_NUM_ARGS() != 0) {
-		WRONG_PARAM_COUNT;
+		ZEND_WRONG_PARAM_COUNT();
 	}
 	intern = PHP_MECAB_NODE_OBJECT_P(ZEND_THIS);
 	xnode = intern->ptr;

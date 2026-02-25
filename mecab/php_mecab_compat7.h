@@ -10,9 +10,13 @@
 #define ZEND_THIS (&EX(This))
 #endif
 
+#ifndef ZEND_WRONG_PARAM_COUNT  // PHP>=8.6
+#define ZEND_WRONG_PARAM_COUNT()  do { zend_wrong_param_count(); RETURN_THROWS(); } while (0)
+#endif
+
 #define PHP_MECAB_INTERNAL_RSRC_FROM_PARAMETER() { \
 	if (ZEND_NUM_ARGS() != 0) { \
-		WRONG_PARAM_COUNT; \
+		ZEND_WRONG_PARAM_COUNT(); \
 	} else { \
 		const php_mecab_object *intern = php_mecab_object_fetch_object(Z_OBJ_P(ZEND_THIS)); \
 		xmecab = intern->ptr; \
@@ -25,7 +29,7 @@
 
 #define PHP_MECAB_INTERNAL_RSRC_FROM_PARAMETER2(name) { \
 	if (ZEND_NUM_ARGS() != 0) { \
-		WRONG_PARAM_COUNT; \
+		ZEND_WRONG_PARAM_COUNT(); \
 	} else { \
 		const php_mecab_##name##_object *intern = php_mecab_##name##_object_fetch_object(Z_OBJ_P(ZEND_THIS)); \
 		x##name = intern->ptr; \
@@ -57,7 +61,7 @@
 
 #define PHP_MECAB_RETURN_PROPERTY(name, type, ...) { \
 	if (ZEND_NUM_ARGS() != 0) { \
-		WRONG_PARAM_COUNT; \
+		ZEND_WRONG_PARAM_COUNT(); \
 	} else { \
 		const php_mecab_##name##_object *intern = php_mecab_##name##_object_fetch_object(Z_OBJ_P(ZEND_THIS)); \
 		const php_mecab_##name *x##name = intern->ptr; \
