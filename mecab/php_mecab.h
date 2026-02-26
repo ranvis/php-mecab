@@ -91,14 +91,11 @@ ZEND_END_MODULE_GLOBALS(mecab)
 
 /* {{{ type definitions */
 
-typedef enum _php_mecab_node_attribute php_mecab_node_attribute;
-typedef enum _php_mecab_node_rel php_mecab_node_rel;
-typedef enum _php_mecab_path_rel php_mecab_path_rel;
 typedef struct _php_mecab php_mecab;
 typedef struct _php_mecab_node php_mecab_node;
 typedef struct _php_mecab_path php_mecab_path;
 
-enum _php_mecab_node_attribute {
+typedef enum php_mecab_node_attribute {
 	ATTR_ALL,
 	ATTR_SURFACE,
 	ATTR_FEATURE,
@@ -116,23 +113,23 @@ enum _php_mecab_node_attribute {
 	ATTR_PROB,
 	ATTR_WCOST,
 	ATTR_COST
-};
+} php_mecab_node_attribute;
 
-enum _php_mecab_node_rel {
+typedef enum php_mecab_node_rel {
 	NODE_PREV,
 	NODE_NEXT,
 	NODE_ENEXT,
 	NODE_BNEXT,
 	NODE_RPATH,
 	NODE_LPATH
-};
+} php_mecab_node_rel;
 
-enum _php_mecab_path_rel {
+typedef enum php_mecab_path_rel {
 	PATH_RNODE,
 	PATH_RNEXT,
 	PATH_LNODE,
 	PATH_LNEXT
-};
+} php_mecab_path_rel;
 
 struct _php_mecab {
 	mecab_t *ptr;
@@ -155,16 +152,15 @@ struct _php_mecab_path {
 	const mecab_path_t *ptr;
 };
 
-typedef enum _php_mecab_traverse_mode php_mecab_traverse_mode;
 typedef struct _php_mecab_object php_mecab_object;
 typedef struct _php_mecab_node_object php_mecab_node_object;
 typedef struct _php_mecab_path_object php_mecab_path_object;
 
-enum _php_mecab_traverse_mode {
+typedef enum php_mecab_traverse_mode {
 	TRAVERSE_NEXT,
 	TRAVERSE_ENEXT,
 	TRAVERSE_BNEXT
-};
+} php_mecab_traverse_mode;
 
 struct _php_mecab_object {
 	zend_object std;

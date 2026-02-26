@@ -171,10 +171,6 @@ static inline php_mecab_path_object * php_mecab_path_object_fetch_object(zend_ob
 }
 #define PHP_MECAB_PATH_OBJECT_P(zv) php_mecab_path_object_fetch_object(Z_OBJ_P(zv))
 
-/* get the class entry */
-static zend_class_entry *
-php_mecab_get_class_entry(const char *lcname);
-
 /* }}} */
 
 /* check file/dicectory accessibility */
@@ -824,21 +820,6 @@ php_mecab_path_get_node_wrapper(INTERNAL_FUNCTION_PARAMETERS, php_mecab_path_rel
 }
 /* }}} */
 
-/* {{{ php_mecab_get_class_entry()
- * get the class entry
- */
-static zend_class_entry *
-php_mecab_get_class_entry(const char *lcname)
-{
-	zval *entry = zend_hash_str_find(CG(class_table), lcname, strlen(lcname));
-	if (entry && Z_TYPE_P(entry) == IS_PTR) {
-		return Z_PTR_P(entry);
-	} else {
-		return NULL;
-	}
-}
-/* }}} */
-
 /* {{{ php_mecab_node_list_method()
  * check file/dicectory accessibility
  */
@@ -1145,7 +1126,6 @@ PHP_METHOD(MeCab_Tagger, __construct)
 	if (zoptions != NULL) {
 		int getopt_result = 0;
 		zend_string *key;
-		zend_ulong num_key;
 		zval *entry;
 
 		ALLOC_HASHTABLE(options);
@@ -1155,7 +1135,7 @@ PHP_METHOD(MeCab_Tagger, __construct)
 
 		argv = (char **)ecalloc(2 * zend_hash_num_elements(options) + min_argc, sizeof(char *));
 
-		ZEND_HASH_FOREACH_KEY_VAL(options, num_key, key, entry) {
+		ZEND_HASH_FOREACH_STR_KEY_VAL(options, key, entry) {
 			convert_to_string_ex(entry);
 		  if (key) {
 				getopt_result = php_mecab_check_option(key);

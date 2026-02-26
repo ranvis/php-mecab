@@ -5,6 +5,7 @@ Multiple user dictionary
 if (!extension_loaded('mecab')) {
     die('skip mecab extension is not loaded');
 }
+?>
 --FILE--
 <?php
 $dicPath = getSysDicDirPath();
@@ -25,6 +26,7 @@ unlink($userDicTextPath);
 $mecab = new \Mecab\Tagger(['-u', implode(',', $userDicPaths)]);
 $out = $mecab->parseToString("辞書");
 echo (strpos($out, "テスト") !== false) ? 'OK' : 'Parse error: ' . $out;
+$mecab = null;
 foreach ($userDicPaths as $userDicPath) {
     unlink($userDicPath);
 }
@@ -49,6 +51,9 @@ function runCmd(array $args, &$output = '')
 
 function getSysDicDirPath()
 {
+    if (($dic = getenv('PHP_MECAB_TEST_DIC')) !== false) {
+        return $dic;
+    }
     if (!runCmd(['mecab-config', '--dicdir'], $dicBasePath)) {
         error('Unable to locate dictionary base path.');
     }
@@ -67,6 +72,9 @@ function getSysDicDirPath()
 function getIndexerPath()
 {
     $indexerName = 'mecab-dict-index';
+    if (($dir = getenv('PHP_MECAB_TEST_BIN_DIR')) !== false) {
+        return $dir . '/' . $indexerName;
+    }
     foreach (['/usr/libexec/mecab', '/usr/local/libexec/mecab'] as $binDir) {
         if (is_executable($binDir . '/' . $indexerName)) {
             return $binDir . '/' . $indexerName;
@@ -74,5 +82,6 @@ function getIndexerPath()
     }
     return $indexerName;
 }
+?>
 --EXPECT--
 OK
