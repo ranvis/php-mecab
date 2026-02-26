@@ -179,20 +179,8 @@ php_mecab_check_path(const char *path, size_t length, char *real_path);
 
 /* }}} */
 
-/* {{{ cross-extension dependencies */
-
-static zend_module_dep mecab_deps[] = {
-	ZEND_MOD_REQUIRED("spl")
-	ZEND_MOD_END
-};
-
-/* }}} */
-
-/* {{{ mecab_module_entry */
 zend_module_entry mecab_module_entry = {
-	STANDARD_MODULE_HEADER_EX,
-	NULL,
-	mecab_deps,
+	STANDARD_MODULE_HEADER,
 	"mecab",
 	ext_functions,
 	PHP_MINIT(mecab),
@@ -207,7 +195,6 @@ zend_module_entry mecab_module_entry = {
 	NULL,
 	STANDARD_MODULE_PROPERTIES_EX
 };
-/* }}} */
 
 #ifdef COMPILE_DL_MECAB
 ZEND_GET_MODULE(mecab)
