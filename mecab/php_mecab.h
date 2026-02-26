@@ -73,8 +73,6 @@ extern "C" {
 
 #define FREE_RESOURCE(resource) zend_list_delete(Z_RESVAL_P(resource))
 
-/* {{{ module globals */
-
 ZEND_BEGIN_MODULE_GLOBALS(mecab)
 	char *default_rcfile;
 	char *default_dicdir;
@@ -86,10 +84,6 @@ ZEND_END_MODULE_GLOBALS(mecab)
 #else
 #define MECAB_G(v) (mecab_globals.v)
 #endif
-
-/* }}} */
-
-/* {{{ type definitions */
 
 typedef struct _php_mecab php_mecab;
 typedef struct _php_mecab_node php_mecab_node;
@@ -179,14 +173,11 @@ struct _php_mecab_path_object {
 	php_mecab_path *ptr;
 };
 
-/* }}} */
-
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
 #endif /* PHP_MECAB_H */
-
 
 /*
  * Local variables:
