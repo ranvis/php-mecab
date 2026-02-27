@@ -16,7 +16,7 @@ if (PHP_MECAB != "no") {
       if (parseFloat(verString[2]) < 0.99) {
         ERROR("MeCab version 0.99 or later is required.");
       }
-      ADD_FLAG('CFLAGS_MECAB', '/DPHP_MECAB_VERSION_STRING="' + verString[1] + '"');
+      ADD_FLAG('CFLAGS_MECAB', '/DPHP_MECAB_VERSION_STRING=\\"' + verString[1] + '\\"');
     }
   }
 
