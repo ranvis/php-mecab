@@ -159,8 +159,7 @@ static inline php_mecab_path_object * php_mecab_path_object_fetch_object(zend_ob
 #define PHP_MECAB_PATH_OBJECT_P(zv) php_mecab_path_object_fetch_object(Z_OBJ_P(zv))
 
 /* check file/dicectory accessibility */
-static zend_bool
-php_mecab_check_path(const char *path, size_t length, char *real_path);
+static zend_bool php_mecab_check_path(const char *path, char *real_path);
 
 
 zend_module_entry mecab_module_entry = {
@@ -761,30 +760,11 @@ php_mecab_path_get_node_wrapper(INTERNAL_FUNCTION_PARAMETERS, php_mecab_path_rel
 /*
  * check file/dicectory accessibility
  */
-static zend_bool
-php_mecab_check_path(const char *path, size_t length, char *real_path)
+static zend_bool php_mecab_check_path(const char *path, char *real_path)
 {
 	char *full_path;
 
-	if (strlen(path) != length)
-	{
-		return 0;
-	}
-
-	if (strchr(path, ',') != NULL) /* multiple paths */
-	{
-		/* don't expand paths or changes will be huge for such a small thing */
-		if (real_path != NULL) {
-			if (length >= PATHBUFSIZE) { /* XXX: assuming buffer size */
-				return 0;
-			}
-			strcpy(real_path, path);
-		}
-		return 1;
-	}
-
-	if ((full_path = expand_filepath(path, real_path)) == NULL)
-	{
+	if ((full_path = expand_filepath(path, real_path)) == NULL) {
 		return 0;
 	}
 
@@ -798,20 +778,87 @@ php_mecab_check_path(const char *path, size_t length, char *real_path)
 		return 0;
 	}
 
-#if !defined(PHP_VERSION_ID) || PHP_VERSION_ID < 50400
-	if (PG(safe_mode) && !php_checkuid(full_path, NULL, CHECKUID_CHECK_FILE_AND_DIR)) {
-		if (real_path == NULL) {
-			efree(full_path);
-		}
-		return 0;
-	}
-#endif
-
 	if (real_path == NULL) {
 		efree(full_path);
 	}
 	return 1;
 }
+
+#define CHECK_OUT_LEN_EXTEND(extend) do { \
+		if (out_len + (extend) > MAXPATHLEN - 1) { \
+			return 0; \
+		} \
+	} while (0)
+
+static zend_bool php_mecab_check_path_multi(const char *path, char *real_path)
+{
+	size_t path_len = strlen(path);
+	// Input is expected to be a comma separated path, not a MeCab-CSV string.
+	// FIXME: accept array<string>
+	if (!memchr(path, ',', path_len)) {  // single path
+		// FIXME: resolved path should be MeCab-CSV escaped
+		return php_mecab_check_path(path, real_path);
+	}
+	char tmp_real_path[MAXPATHLEN];
+	if (!tmp_real_path) {
+		real_path = tmp_real_path;  // simplify the code, currently no caller should take this path though
+	}
+	size_t out_len = 0;
+	const char *p = path;
+	for (const char *item_start = p;;) {
+		if (!*p || *p == ',') {
+			size_t item_len = p - item_start;
+			if (!item_len) {  // empty item
+				return 0;
+			}
+			char real_item[MAXPATHLEN];
+			char item_buf[MAXPATHLEN];
+			memcpy(item_buf, item_start, item_len);
+			item_buf[item_len] = '\0';
+			if (!php_mecab_check_path(item_buf, real_item)) {
+				return 0;
+			}
+			if (out_len) {
+				CHECK_OUT_LEN_EXTEND(1);
+				real_path[out_len++] = ',';
+			}
+			size_t real_len = strlen(real_item);
+			if (!real_len) {
+				return 0;
+			}
+			if (real_len && (real_item[0] == '"' || real_item[real_len - 1] == '"' || memchr(real_item, ',', real_len))) {
+				CHECK_OUT_LEN_EXTEND(1);
+				real_path[out_len++] = '"';
+				for (size_t i = 0; i < real_len; i++) {
+					if (real_item[i] == '"') {
+						CHECK_OUT_LEN_EXTEND(2);
+						real_path[out_len++] = '"';
+						real_path[out_len++] = '"';
+					} else {
+						CHECK_OUT_LEN_EXTEND(1);
+						real_path[out_len++] = real_item[i];
+					}
+				}
+				CHECK_OUT_LEN_EXTEND(1);
+				real_path[out_len++] = '"';
+			} else {
+				CHECK_OUT_LEN_EXTEND(real_len);
+				memcpy(real_path + out_len, real_item, real_len);
+				out_len += real_len;
+			}
+			if (!*p) {
+				break;
+			}
+			item_start = p + 1;
+		}
+		p++;
+	}
+	assert(out_len < MAXPATHLEN);
+	real_path[out_len] = '\0';
+	return 1;
+}
+
+#undef CHECK_OUT_LEN_EXTEND
 
 /* check if default parameter is set */
 #define PHP_MECAB_CHECK_DEFAULT(name) \
@@ -880,13 +927,15 @@ php_mecab_check_option(zend_string *zopt)
 	return PHP_MECAB_GETOPT_FAILURE;
 }
 
-/* check for open_basedir and safe_mode */
-#define PHP_MECAB_CHECK_FILE(path, length) \
+/* check for open_basedir */
+#define PHP_MECAB_CHECK_FILE(path, real_path, opt_flag) \
 { \
-	if (!php_mecab_check_path((path), (length), resolved_path)) { \
-		efree(argv); \
+	zend_bool result = opt_flag & PHP_MECAB_GETOPT_USERDIC_EXPECTED \
+		? php_mecab_check_path_multi((path), (real_path)) \
+		: php_mecab_check_path((path), (real_path)); \
+	if (!result) { \
 		php_error_docref(NULL, E_WARNING, "'%s' does not exist or is not readable", (path)); \
-		RETURN_FALSE; \
+		goto error; \
 	} \
 	flag_expected = 1; \
 	path_expected = 0; \
@@ -932,9 +981,8 @@ PHP_FUNCTION(MeCab_split)
 	const mecab_node_t *node = NULL;
 	int argc = 2;
 	char *argv[5] = { "mecab", "-Owakati", NULL, NULL, NULL };
-	char pathbuf[2][PATHBUFSIZE] = {{'\0'}};
-	char *dicdir_buf = &(pathbuf[0][0]);
-	char *userdic_buf = &(pathbuf[1][0]);
+	char dicdir_buf[PATHBUFSIZE] = "";
+	char userdic_buf[PATHBUFSIZE] = "";
 
 	/* parse arguments */
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|S!S!", &str, &zdicdir, &zuserdic) == FAILURE) {
@@ -945,6 +993,10 @@ PHP_FUNCTION(MeCab_split)
 	if (zdicdir != NULL && ZSTR_LEN(zdicdir) > 0) {
 		dicdir = ZSTR_VAL(zdicdir);
 		dicdir_len = ZSTR_LEN(zdicdir);
+		if (memchr(dicdir, '\0', dicdir_len)) {
+			php_error_docref(NULL, E_WARNING, "dicdir contains NUL");
+			RETURN_FALSE;
+		}
 	} else if (PHP_MECAB_CHECK_DEFAULT(dicdir)) {
 		dicdir = MECAB_G(default_dicdir);
 		dicdir_len = strlen(MECAB_G(default_dicdir));
@@ -952,6 +1004,10 @@ PHP_FUNCTION(MeCab_split)
 	if (zuserdic != NULL && ZSTR_LEN(zuserdic) > 0) {
 		userdic = ZSTR_VAL(zuserdic);
 		userdic_len = ZSTR_LEN(zuserdic);
+		if (memchr(userdic, '\0', userdic_len)) {
+			php_error_docref(NULL, E_WARNING, "userdic contains NUL");
+			RETURN_FALSE;
+		}
 	} else if (PHP_MECAB_CHECK_DEFAULT(userdic)) {
 		userdic = MECAB_G(default_userdic);
 		userdic_len = strlen(MECAB_G(default_userdic));
@@ -962,7 +1018,7 @@ PHP_FUNCTION(MeCab_split)
 		char *dicdir_ptr = dicdir_buf;
 		*dicdir_ptr++ = '-';
 		*dicdir_ptr++ = 'd';
-		if (!php_mecab_check_path(dicdir, dicdir_len, dicdir_ptr)) {
+		if (!php_mecab_check_path(dicdir, dicdir_ptr)) {
 			php_error_docref(NULL, E_WARNING,
 					"'%s' does not exist or is not readable", dicdir);
 			RETURN_FALSE;
@@ -973,7 +1029,7 @@ PHP_FUNCTION(MeCab_split)
 		char *userdic_ptr = userdic_buf;
 		*userdic_ptr++ = '-';
 		*userdic_ptr++ = 'u';
-		if (!php_mecab_check_path(userdic, userdic_len, userdic_ptr)) {
+		if (!php_mecab_check_path_multi(userdic, userdic_ptr)) {
 			php_error_docref(NULL, E_WARNING,
 					"'%s' does not exist or is not readable", userdic);
 			RETURN_FALSE;
@@ -1030,6 +1086,16 @@ PHP_METHOD(MeCab_Tagger, __construct)
 	php_mecab *xmecab = NULL;
 	mecab_t *mecab = NULL;
 
+	{
+		const php_mecab_object *intern = PHP_MECAB_OBJECT_P(ZEND_THIS);
+		xmecab = intern->ptr;
+		if (xmecab->ptr != NULL) {
+			zend_throw_exception(spl_ce_BadMethodCallException,
+					"MeCab already initialized", 0);
+			return;
+		}
+	}
+
 	/* declaration of the arguments */
 	zval *zoptions = NULL;
 	HashTable *options = NULL;
@@ -1040,10 +1106,9 @@ PHP_METHOD(MeCab_Tagger, __construct)
 	char **argv = NULL;
 	int flag_expected = 1;
 	int path_expected = 0;
-	char pathbuf[3][PATHBUFSIZE] = {{'\0'}};
-	char *rcfile_buf = &(pathbuf[0][0]);
-	char *dicdir_buf = &(pathbuf[1][0]);
-	char *userdic_buf = &(pathbuf[2][0]);
+	char rcfile_buf[PATHBUFSIZE] = "";
+	char dicdir_buf[PATHBUFSIZE] = "";
+	char userdic_buf[PATHBUFSIZE] = "";
 	char *resolved_path = NULL;
 
 	/* parse arguments */
@@ -1054,6 +1119,7 @@ PHP_METHOD(MeCab_Tagger, __construct)
 	/* parse options */
 	if (zoptions != NULL) {
 		int getopt_result = 0;
+		zend_ulong idx;
 		zend_string *key;
 		zval *entry;
 
@@ -1064,28 +1130,30 @@ PHP_METHOD(MeCab_Tagger, __construct)
 
 		argv = (char **)ecalloc(2 * zend_hash_num_elements(options) + min_argc, sizeof(char *));
 
-		ZEND_HASH_FOREACH_STR_KEY_VAL(options, key, entry) {
+		ZEND_HASH_FOREACH_KEY_VAL(options, idx, key, entry) {
 			convert_to_string_ex(entry);
-		  if (key) {
+			if (key) {
 				getopt_result = php_mecab_check_option(key);
 				if (getopt_result == FAILURE) {
 					php_error_docref(NULL, E_WARNING, "Invalid option '%s' given", ZSTR_VAL(key));
-					efree(argv);
-					RETURN_FALSE;
-				} else {
-					flag_expected = getopt_result & PHP_MECAB_GETOPT_FLAG_EXPECTED;
-					path_expected = getopt_result & PHP_MECAB_GETOPT_PATH_EXPECTED;
-					if (getopt_result & PHP_MECAB_GETOPT_RCFILE_EXPECTED) {
-						resolved_path = rcfile_buf;
-					} else if (getopt_result & PHP_MECAB_GETOPT_DICDIR_EXPECTED) {
-						resolved_path = dicdir_buf;
-					} else if (getopt_result & PHP_MECAB_GETOPT_USERDIC_EXPECTED) {
-						resolved_path = userdic_buf;
-					}
+					goto error;
+				}
+				flag_expected = getopt_result & PHP_MECAB_GETOPT_FLAG_EXPECTED;
+				path_expected = getopt_result & PHP_MECAB_GETOPT_PATH_EXPECTED;
+				if (getopt_result & PHP_MECAB_GETOPT_RCFILE_EXPECTED) {
+					resolved_path = rcfile_buf;
+				} else if (getopt_result & PHP_MECAB_GETOPT_DICDIR_EXPECTED) {
+					resolved_path = dicdir_buf;
+				} else if (getopt_result & PHP_MECAB_GETOPT_USERDIC_EXPECTED) {
+					resolved_path = userdic_buf;
 				}
 				argv[argc++] = ZSTR_VAL(key);
+				if (memchr(Z_STRVAL_P(entry), '\0', Z_STRLEN_P(entry))) {
+					php_error_docref(NULL, E_WARNING, "Value of option '%s' contains NUL", key);
+					goto error;
+				}
 				if (path_expected) {
-					PHP_MECAB_CHECK_FILE(Z_STRVAL_P(entry), Z_STRLEN_P(entry));
+					PHP_MECAB_CHECK_FILE(Z_STRVAL_P(entry), resolved_path, path_expected);
 					argv[argc++] = resolved_path;
 				} else {
 					argv[argc++] = Z_STRVAL_P(entry);
@@ -1098,25 +1166,29 @@ PHP_METHOD(MeCab_Tagger, __construct)
 					if (getopt_result == FAILURE) {
 						php_error_docref(NULL, E_WARNING,
 								"Invalid option '%s' given", Z_STRVAL_P(entry));
-						efree(argv);
-						RETURN_FALSE;
-					} else {
-						flag_expected = getopt_result & PHP_MECAB_GETOPT_FLAG_EXPECTED;
-						path_expected = getopt_result & PHP_MECAB_GETOPT_PATH_EXPECTED;
-						if (getopt_result & PHP_MECAB_GETOPT_RCFILE_EXPECTED) {
-							resolved_path = rcfile_buf;
-						} else if (getopt_result & PHP_MECAB_GETOPT_DICDIR_EXPECTED) {
-							resolved_path = dicdir_buf;
-						} else if (getopt_result & PHP_MECAB_GETOPT_USERDIC_EXPECTED) {
-							resolved_path = userdic_buf;
-						}
+						goto error;
+					}
+					flag_expected = getopt_result & PHP_MECAB_GETOPT_FLAG_EXPECTED;
+					path_expected = getopt_result & PHP_MECAB_GETOPT_PATH_EXPECTED;
+					if (getopt_result & PHP_MECAB_GETOPT_RCFILE_EXPECTED) {
+						resolved_path = rcfile_buf;
+					} else if (getopt_result & PHP_MECAB_GETOPT_DICDIR_EXPECTED) {
+						resolved_path = dicdir_buf;
+					} else if (getopt_result & PHP_MECAB_GETOPT_USERDIC_EXPECTED) {
+						resolved_path = userdic_buf;
 					}
 					argv[argc++] = Z_STRVAL_P(entry);
-				} else if (path_expected) {
-					PHP_MECAB_CHECK_FILE(Z_STRVAL_P(entry), Z_STRLEN_P(entry));
-					argv[argc++] = resolved_path;
 				} else {
-					argv[argc++] = Z_STRVAL_P(entry);
+					if (memchr(Z_STRVAL_P(entry), '\0', Z_STRLEN_P(entry))) {
+						php_error_docref(NULL, E_WARNING, "Value of option index %d contains NUL", idx);
+						goto error;
+					}
+					if (path_expected) {
+						PHP_MECAB_CHECK_FILE(Z_STRVAL_P(entry), resolved_path, path_expected);
+						argv[argc++] = resolved_path;
+					} else {
+						argv[argc++] = Z_STRVAL_P(entry);
+					}
 				}
 			}
 		} ZEND_HASH_FOREACH_END();
@@ -1126,34 +1198,33 @@ PHP_METHOD(MeCab_Tagger, __construct)
 
 	/* apply default options */
 	if (rcfile_buf[0] == '\0' && PHP_MECAB_CHECK_DEFAULT(rcfile)) {
-		size_t rcfile_len = strlen(MECAB_G(default_rcfile));
 		resolved_path = rcfile_buf;
 		*resolved_path++ = '-';
 		*resolved_path++ = 'r';
-		PHP_MECAB_CHECK_FILE(MECAB_G(default_rcfile), rcfile_len);
+		PHP_MECAB_CHECK_FILE(MECAB_G(default_rcfile), resolved_path, PHP_MECAB_GETOPT_RCFILE_EXPECTED);
 		argv[argc++] = rcfile_buf;
 	}
 	if (dicdir_buf[0] == '\0' && PHP_MECAB_CHECK_DEFAULT(dicdir)) {
-		size_t dicdir_len = strlen(MECAB_G(default_dicdir));
 		resolved_path = dicdir_buf;
 		*resolved_path++ = '-';
 		*resolved_path++ = 'd';
-		PHP_MECAB_CHECK_FILE(MECAB_G(default_dicdir), dicdir_len);
+		PHP_MECAB_CHECK_FILE(MECAB_G(default_dicdir), resolved_path, PHP_MECAB_GETOPT_DICDIR_EXPECTED);
 		argv[argc++] = dicdir_buf;
 	}
 	if (userdic_buf[0] == '\0' && PHP_MECAB_CHECK_DEFAULT(userdic)) {
-		size_t userdic_len = strlen(MECAB_G(default_userdic));
 		resolved_path = userdic_buf;
 		*resolved_path++ = '-';
 		*resolved_path++ = 'u';
-		PHP_MECAB_CHECK_FILE(MECAB_G(default_userdic), userdic_len);
+		PHP_MECAB_CHECK_FILE(MECAB_G(default_userdic), resolved_path, PHP_MECAB_GETOPT_USERDIC_EXPECTED);
 		argv[argc++] = userdic_buf;
 	}
 
 	/* create mecab object */
 	argv[0] = "mecab";
 	argv[argc] = NULL;
-	mecab = mecab_new(argc, argv);
+	if (!(mecab = mecab_new(argc, argv))) {
+		goto error;
+	}
 
 	efree(argv);
 	if (options != NULL) {
@@ -1161,23 +1232,15 @@ PHP_METHOD(MeCab_Tagger, __construct)
 		FREE_HASHTABLE(options);
 	}
 
-	/* on error */
-	if (mecab == NULL) {
-		php_error_docref(NULL, E_WARNING, "%s", mecab_strerror(NULL));
-		RETURN_FALSE;
-	}
-
-	{
-		const php_mecab_object *intern = PHP_MECAB_OBJECT_P(ZEND_THIS);
-		xmecab = intern->ptr;
-		if (xmecab->ptr != NULL) {
-			mecab_destroy(mecab);
-			zend_throw_exception(spl_ce_BadMethodCallException,
-					"MeCab already initialized", 0);
-			return;
-		}
-	}
 	xmecab->ptr = mecab;
+	return;
+error:
+	efree(argv);
+	if (options) {
+		zend_hash_destroy(options);
+		FREE_HASHTABLE(options);
+	}
+	zend_throw_error(NULL, "Unable to initialize MeCab\\Tagger object");
 }
 
 /**
