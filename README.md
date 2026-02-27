@@ -1,6 +1,11 @@
 php-mecab: MeCab binding for PHP
 ================================
 
+Note: This is a custom fork.
+
+While it has almost the same interface as the original,
+it includes a minor extra feature for some use cases.
+
 
 INSTALL
 -------

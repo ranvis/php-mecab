@@ -1,3 +1,13 @@
+XXXX-XX-XX: php-mecab 0.6.0+rv
+====================
+
+* Add support for PHP 8.
+* Multiple userdic support. (unpolished)
+  Use comma `,` as a path separtor.
+* Improve compatibility on Windows MSVC build.
+* Code for PHP 5 is not updated.
+* Drop C90 compiler compatibility.
+
 2015-12-05: php-mecab 0.6.0
 ===========================
 
