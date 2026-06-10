@@ -35,6 +35,7 @@
 #else
 #include "mecab_legacy_arginfo.h"
 #endif
+#include <stddef.h>
 #include <ext/spl/spl_exceptions.h>
 
 #define ZEND_HAS_DEFAULT_OBJECT_HANDLERS (ZEND_EXTENSION_API_NO >= 420230831)
@@ -150,7 +151,7 @@ php_mecab_free_object_storage(zend_object *object);
 
 /* fetch the mecab object */
 static inline php_mecab_object * php_mecab_object_fetch_object(zend_object *obj) {
-	return (php_mecab_object *)((char *)obj - XtOffsetOf(php_mecab_object, std));
+	return (php_mecab_object *)((char *)obj - offsetof(php_mecab_object, std));
 }
 #define PHP_MECAB_OBJECT_P(zv) php_mecab_object_fetch_object(Z_OBJ_P(zv))
 
@@ -164,7 +165,7 @@ php_mecab_node_free_object_storage(zend_object *object);
 
 /* fetch the mecab_node object */
 static inline php_mecab_node_object * php_mecab_node_object_fetch_object(zend_object *obj) {
-	return (php_mecab_node_object *)((char *)obj - XtOffsetOf(php_mecab_node_object, std));
+	return (php_mecab_node_object *)((char *)obj - offsetof(php_mecab_node_object, std));
 }
 #define PHP_MECAB_NODE_OBJECT_P(zv) php_mecab_node_object_fetch_object(Z_OBJ_P(zv))
 
@@ -178,7 +179,7 @@ php_mecab_path_free_object_storage(zend_object *object);
 
 /* fetch the mecab_path object */
 static inline php_mecab_path_object * php_mecab_path_object_fetch_object(zend_object *obj) {
-	return (php_mecab_path_object *)((char *)obj - XtOffsetOf(php_mecab_path_object, std));
+	return (php_mecab_path_object *)((char *)obj - offsetof(php_mecab_path_object, std));
 }
 #define PHP_MECAB_PATH_OBJECT_P(zv) php_mecab_path_object_fetch_object(Z_OBJ_P(zv))
 
@@ -232,7 +233,7 @@ static PHP_MINIT_FUNCTION(mecab)
 		memcpy(&php_mecab_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 		php_mecab_object_handlers.clone_obj = NULL;
 		php_mecab_object_handlers.free_obj = php_mecab_free_object_storage;
-		php_mecab_object_handlers.offset = XtOffsetOf(php_mecab_object, std);
+		php_mecab_object_handlers.offset = offsetof(php_mecab_object, std);
 	}
 	{
 		ce_MeCab_NodeIterator = register_class_MeCab_NodeIterator(zend_ce_iterator);
@@ -247,7 +248,7 @@ static PHP_MINIT_FUNCTION(mecab)
 		memcpy(&php_mecab_node_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 		php_mecab_node_object_handlers.clone_obj = NULL;
 		php_mecab_node_object_handlers.free_obj = php_mecab_node_free_object_storage;
-		php_mecab_node_object_handlers.offset = XtOffsetOf(php_mecab_node_object, std);
+		php_mecab_node_object_handlers.offset = offsetof(php_mecab_node_object, std);
 
 		zend_declare_class_constant_long(ce_MeCab_Node, "NOR", 3, MECAB_NOR_NODE);
 		zend_declare_class_constant_long(ce_MeCab_Node, "UNK", 3, MECAB_UNK_NODE);
@@ -268,7 +269,7 @@ static PHP_MINIT_FUNCTION(mecab)
 		memcpy(&php_mecab_path_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 		php_mecab_path_object_handlers.clone_obj = NULL;
 		php_mecab_path_object_handlers.free_obj = php_mecab_path_free_object_storage;
-		php_mecab_path_object_handlers.offset = XtOffsetOf(php_mecab_path_object, std);
+		php_mecab_path_object_handlers.offset = offsetof(php_mecab_path_object, std);
 	}
 
 	return SUCCESS;
